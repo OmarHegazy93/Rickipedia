@@ -203,14 +203,12 @@ extension CharacterListVC: UITableViewDataSource, UITableViewDelegate {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CharacterCell", for: indexPath) as! CharacterTableViewCell
         
         let character = viewModel.characters[indexPath.row]
-        
+        cell.selectionStyle = .none
         cell.configure(
-            image: UIImage(systemName: "person.fill") ?? UIImage(),
+            imageURL: URL(string: character.image),
             name: character.name,
             species: character.species
         )
-        cell.selectionStyle = .none
-        
         return cell
     }
     

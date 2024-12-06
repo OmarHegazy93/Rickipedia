@@ -11,8 +11,8 @@ import SwiftUI
 final class CharacterTableViewCell: UITableViewCell {
     private var hostingController: UIHostingController<CharacterCellView>?
 
-    func configure(image: UIImage, name: String, species: String) {
-        let swiftUIView = CharacterCellView(image: image, name: name, species: species)
+    func configure(imageURL: URL?, name: String, species: String) {
+        let swiftUIView = CharacterCellView(imageURL: imageURL, name: name, species: species)
         
         if hostingController == nil {
             let hostingController = UIHostingController(rootView: swiftUIView)

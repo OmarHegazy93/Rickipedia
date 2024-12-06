@@ -9,12 +9,12 @@
 import SwiftUI
 
 struct CharacterCellViewWrapper: UIViewRepresentable {
-    let image: UIImage
+    let imageURL: URL?
     let title: String
     let subtitle: String
 
     func makeUIView(context: Context) -> UIView {
-        let view = UIHostingController(rootView: CharacterCellView(image: image, name: title, species: subtitle))
+        let view = UIHostingController(rootView: CharacterCellView(imageURL: imageURL, name: title, species: subtitle))
         view.view.backgroundColor = .clear // Make background transparent
         return view.view
     }
