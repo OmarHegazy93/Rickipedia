@@ -15,8 +15,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
         window = UIWindow(windowScene: windowScene)
-        let vc = ViewController()
-        vc.view.backgroundColor = .red
+        let vc = CharacterListVC()
         let navigationController = UINavigationController(rootViewController: vc)
         
         navigationController.navigationBar.prefersLargeTitles = true
