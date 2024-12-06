@@ -40,7 +40,9 @@ final class CharacterListVC: UIViewController {
         setupTableView()
         setupLayout()
         bindViewModel()
-        viewModel.fetchCharacters()
+        Task { @MainActor in
+            await viewModel.fetchCharacters()
+        }
     }
     
     private func setupCollectionView() {
@@ -102,7 +104,9 @@ final class CharacterListVC: UIViewController {
     
     private func showErrorView(message: String) {
         let errorView = ErrorView(message: message) { [weak self] in
-            self?.viewModel.fetchCharacters()
+            Task { @MainActor in
+                await self?.viewModel.fetchCharacters()
+            }
         }
         let hostingController = UIHostingController(rootView: errorView)
         addChild(hostingController)
@@ -180,14 +184,18 @@ extension CharacterListVC: UICollectionViewDataSource, UICollectionViewDelegateF
         let item = collectionView.cellForItem(at: indexPath)
         if item?.isSelected ?? false {
             collectionView.deselectItem(at: indexPath, animated: true)
-            viewModel.removeFilter()
+            DispatchQueue.main.async {
+                self.viewModel.removeFilter()
+            }
             return false
         }
         
         collectionView.selectItem(at: indexPath, animated: true, scrollPosition: [])
         let selectedFilterStr = filterCollectionList[indexPath.row]
         if let selectedFilter = Status.allCases.first(where: { $0.rawValue.capitalized == selectedFilterStr }) {
-            viewModel.filter(by: selectedFilter)
+            DispatchQueue.main.async {
+                self.viewModel.filter(by: selectedFilter)
+            }
         }
         return true
     }
@@ -225,7 +233,9 @@ extension CharacterListVC: UITableViewDataSource, UITableViewDelegate {
         if position > contentHeight - tableViewHeight - 100 {
             if !viewModel.isLoading && viewModel.hasMoreData {
                 addLoadingIndicator()
-                viewModel.fetchCharacters()
+                Task { @MainActor in
+                    await viewModel.fetchCharacters()
+                }
             }
         }
     }
