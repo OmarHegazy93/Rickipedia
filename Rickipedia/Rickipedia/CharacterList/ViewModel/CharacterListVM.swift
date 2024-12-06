@@ -17,7 +17,7 @@ final class CharacterListVM: ObservableObject {
     private var cashedCharacters: [CharacterDetails] = []
     @Published private(set) var characters: [CharacterDetails] = []
     @Published private(set) var error: RequestError?
-    private(set) var isLoading = false
+    @Published private(set) var isLoading = false
     private var selectedFilter: Status?
     
     var currentPage = 1
@@ -31,7 +31,6 @@ final class CharacterListVM: ObservableObject {
     func fetchCharacters() {
         isLoading = true
         Task {[unowned self] in
-            
             let responseResult: Result<CharacterListModel, RequestError> = await requestManager.perform(CharacterListRequest.characters(currentPage, selectedFilter?.rawValue ?? ""))
             
             isLoading = false
