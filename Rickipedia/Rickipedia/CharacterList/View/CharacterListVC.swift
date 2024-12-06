@@ -10,27 +10,11 @@ import Combine
 import SwiftUI
 
 final class CharacterListVC: UIViewController {
-    private let viewModel = CharacterListVM()
+    @ObservedObject var viewModel = CharacterListVM()
     private var cancellables = Set<AnyCancellable>()
     private let filterCollectionList = Status.allCases.map(\.rawValue.capitalized)
     
-    private let progressView: UIView = {
-        let view = UIView()
-        view.backgroundColor = UIColor(white: 0, alpha: 0.5)
-        view.translatesAutoresizingMaskIntoConstraints = false
-        let activityIndicator = UIActivityIndicatorView(style: .large)
-        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
-        activityIndicator.startAnimating()
-        view.addSubview(activityIndicator)
-        NSLayoutConstraint.activate([
-            activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor)
-        ])
-        view.isHidden = true
-        return view
-    }()
-    
-    private let collectionView: UICollectionView = {
+    private let filtersCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 10
@@ -42,9 +26,8 @@ final class CharacterListVC: UIViewController {
         return collectionView
     }()
     
-    private let tableView: UITableView = {
+    private let charactersTableView: UITableView = {
         let tableView = UITableView()
-        tableView.showsVerticalScrollIndicator = false
         tableView.translatesAutoresizingMaskIntoConstraints = false
         return tableView
     }()
@@ -53,7 +36,6 @@ final class CharacterListVC: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
         self.navigationItem.title = "Characters"
-        setupProgressView()
         setupCollectionView()
         setupTableView()
         setupLayout()
@@ -62,43 +44,33 @@ final class CharacterListVC: UIViewController {
     }
     
     private func setupCollectionView() {
-        view.addSubview(collectionView)
-        collectionView.dataSource = self
-        collectionView.delegate = self
-        collectionView.register(FilterCollectionViewCell.self, forCellWithReuseIdentifier: "CollectionCell")
+        view.addSubview(filtersCollectionView)
+        filtersCollectionView.dataSource = self
+        filtersCollectionView.delegate = self
+        filtersCollectionView.register(FilterCollectionViewCell.self, forCellWithReuseIdentifier: "CollectionCell")
     }
     
     private func setupTableView() {
-        view.addSubview(tableView)
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.isHidden = true
-        tableView.register(CharacterTableViewCell.self, forCellReuseIdentifier: "CharacterCell")
+        view.addSubview(charactersTableView)
+        charactersTableView.dataSource = self
+        charactersTableView.delegate = self
+        charactersTableView.isHidden = true
+        charactersTableView.register(CharacterTableViewCell.self, forCellReuseIdentifier: "CharacterCell")
     }
     
     private func setupLayout() {
         NSLayoutConstraint.activate([
             // CollectionView constraints
-            collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.heightAnchor.constraint(equalToConstant: 50),
+            filtersCollectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            filtersCollectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            filtersCollectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            filtersCollectionView.heightAnchor.constraint(equalToConstant: 50),
             
             // TableView constraints
-            tableView.topAnchor.constraint(equalTo: collectionView.bottomAnchor, constant: 10),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-    }
-    
-    private func setupProgressView() {
-        view.addSubview(progressView)
-        NSLayoutConstraint.activate([
-            progressView.topAnchor.constraint(equalTo: view.topAnchor),
-            progressView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            progressView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            progressView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            charactersTableView.topAnchor.constraint(equalTo: filtersCollectionView.bottomAnchor, constant: 10),
+            charactersTableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            charactersTableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            charactersTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
     
@@ -106,7 +78,9 @@ final class CharacterListVC: UIViewController {
         viewModel.$isLoading
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isLoading in
-                self?.progressView.isHidden = !isLoading
+                if !isLoading {
+                    self?.charactersTableView.tableFooterView = nil
+                }
             }
             .store(in: &cancellables)
         
@@ -136,7 +110,7 @@ final class CharacterListVC: UIViewController {
         view.addSubview(hostingController.view)
         hostingController.didMove(toParent: self)
         
-        tableView.isHidden = true
+        charactersTableView.isHidden = true
     }
     
     private func showTableView() {
@@ -147,14 +121,26 @@ final class CharacterListVC: UIViewController {
                 $0.removeFromParent()
             }
         
-        tableView.isHidden = false
+        charactersTableView.isHidden = false
     }
     
     private func animateTableViewChanges() {
-        UIView.animate(withDuration: 0.5) {
-            self.showTableView()
-            self.tableView.reloadData()
+        showTableView()
+        charactersTableView.reloadData()
+        UIView.animate(withDuration: 0.3, animations: {
+            self.charactersTableView.alpha = 0.0
+        }) { _ in
+            UIView.animate(withDuration: 0.3) {
+                self.charactersTableView.alpha = 1.0
+            }
         }
+    }
+    
+    private func addLoadingIndicator() {
+        let loadingIndicator = UIActivityIndicatorView(style: .medium)
+        loadingIndicator.startAnimating()
+        loadingIndicator.frame = CGRect(x: 0, y: 0, width: charactersTableView.bounds.width, height: 50)
+        charactersTableView.tableFooterView = loadingIndicator
     }
 }
 
@@ -189,6 +175,8 @@ extension CharacterListVC: UICollectionViewDataSource, UICollectionViewDelegateF
     }
     
     func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
+        guard !viewModel.isLoading else { return false }
+        
         let item = collectionView.cellForItem(at: indexPath)
         if item?.isSelected ?? false {
             collectionView.deselectItem(at: indexPath, animated: true)
@@ -228,5 +216,31 @@ extension CharacterListVC: UITableViewDataSource, UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         print("✅✅✅✅ Selected row \(indexPath.row + 1)")
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        let position = scrollView.contentOffset.y
+        let contentHeight = scrollView.contentSize.height
+        let tableViewHeight = scrollView.frame.size.height
+        
+        // Check if the user has scrolled near the bottom
+        if position > contentHeight - tableViewHeight - 100 {
+            if !viewModel.isLoading && viewModel.hasMoreData {
+                addLoadingIndicator()
+                viewModel.fetchCharacters()
+            }
+        }
+    }
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        if scrollView == charactersTableView {
+            filtersCollectionView.isUserInteractionEnabled = false
+        }
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if scrollView == charactersTableView {
+            filtersCollectionView.isUserInteractionEnabled = true
+        }
     }
 }

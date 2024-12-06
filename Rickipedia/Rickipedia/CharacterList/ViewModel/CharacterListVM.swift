@@ -15,9 +15,10 @@ struct FilterItem {
 
 final class CharacterListVM: ObservableObject {
     private var cashedCharacters: [CharacterDetails] = []
-    @Published private(set) var characters: [CharacterDetails] = []
-    @Published private(set) var error: RequestError?
-    @Published private(set) var isLoading = false
+    @MainActor @Published private(set) var characters: [CharacterDetails] = []
+    @MainActor @Published private(set) var error: RequestError?
+    @MainActor @Published private(set) var isLoading = false
+    @MainActor private(set) var hasMoreData: Bool = true
     private var selectedFilter: Status?
     
     var currentPage = 1
@@ -28,32 +29,48 @@ final class CharacterListVM: ObservableObject {
         self.requestManager = requestManager
     }
     
+    @MainActor
     func fetchCharacters() {
+        guard !isLoading && hasMoreData else { return }
+        
         isLoading = true
-        Task {[unowned self] in
+        error = nil
+        
+        Task.detached {[unowned self] in
             let responseResult: Result<CharacterListModel, RequestError> = await requestManager.perform(CharacterListRequest.characters(currentPage, selectedFilter?.rawValue ?? ""))
             
-            isLoading = false
+            await MainActor.run { isLoading = false }
             switch responseResult {
             case .success(let requestModel):
                 if let firstID = requestModel.characters.first?.id,
-                characters.contains(where: { $0.id == firstID }) {
+                   await characters.contains(where: { $0.id == firstID }) {
                     return
                 }
                 cashedCharacters.append(contentsOf: requestModel.characters)
-                characters.append(contentsOf: requestModel.characters)
+                await MainActor.run {
+                    characters.append(contentsOf: requestModel.characters)
+                    hasMoreData = requestModel.info.next != nil
+                    currentPage += hasMoreData ? 1 : 0
+                }
             case .failure(let requestError):
-                error = requestError
+                if case .networkError(let networkErrType) = requestError,
+                   case .unexpectedStatusCode(let errCode) = networkErrType,
+                   errCode == 404 {
+                    // no need to throw an error here, as per the API, 404 means that no more data to provide
+                    await MainActor.run { hasMoreData = false }
+                    return
+                }
+                await MainActor.run { error = requestError }
             }
         }
     }
     
-    func filter(by newFilter: Status) {
+    @MainActor func filter(by newFilter: Status) {
         selectedFilter = newFilter
         characters = cashedCharacters.filter { $0.status == newFilter }
     }
     
-    func removeFilter() {
+    @MainActor func removeFilter() {
         selectedFilter = nil
         characters = cashedCharacters
     }
