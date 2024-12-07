@@ -15,10 +15,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         
         window = UIWindow(windowScene: windowScene)
-        let vc = CharacterListVC()
-        let navigationController = UINavigationController(rootViewController: vc)
-        
+        let navigationController = UINavigationController()
         navigationController.navigationBar.prefersLargeTitles = true
+        let coordinator = CharactersFlowCoordinator(navigationController: navigationController)
+        coordinator.start()
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
     }

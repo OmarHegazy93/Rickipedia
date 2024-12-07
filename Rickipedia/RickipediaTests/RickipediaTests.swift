@@ -10,9 +10,10 @@ import Foundation
 @testable import Rickipedia
 
 struct CharacterListVMTests {
+    let coordinator = CharactersListCoordinatorMock()
     func makeCharacterListVM(response: Data = Data(), error: NetworkError? = nil) -> CharacterListVM {
         let requestManager = RequestManager(apiManager: ApiManagerMock(data: response, error: error))
-        return CharacterListVM(requestManager: requestManager)
+        return CharacterListVM(requestManager: requestManager, coordinator: coordinator)
     }
         
     @Test("Test fetchCharacters with successful request")
@@ -81,7 +82,7 @@ struct CharacterListVMTests {
         let firstPageData = try JSONEncoder().encode(generateRequestModel(atPage: 1))
         let apiManager = ApiManagerMock(data: firstPageData, error: nil)
         let requestManager = RequestManager(apiManager: apiManager)
-        let characterViewModel = CharacterListVM(requestManager: requestManager)
+        let characterViewModel = CharacterListVM(requestManager: requestManager, coordinator: coordinator)
         
         try await #require(characterViewModel.characters.isEmpty)
         
@@ -100,7 +101,7 @@ struct CharacterListVMTests {
         let lastPageData = try JSONEncoder().encode(generateRequestModel(isLastPage: true, atPage: 1))
         let apiManager = ApiManagerMock(data: lastPageData, error: nil)
         let requestManager = RequestManager(apiManager: apiManager)
-        let characterViewModel = CharacterListVM(requestManager: requestManager)
+        let characterViewModel = CharacterListVM(requestManager: requestManager, coordinator: coordinator)
         
         try await #require(characterViewModel.characters.isEmpty)
         try #require(characterViewModel.hasMoreData == true)

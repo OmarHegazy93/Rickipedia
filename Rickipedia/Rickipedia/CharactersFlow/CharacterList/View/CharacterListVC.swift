@@ -10,9 +10,18 @@ import Combine
 import SwiftUI
 
 final class CharacterListVC: UIViewController {
-    @ObservedObject var viewModel = CharacterListVM()
+    let viewModel: CharacterListVM
     private var cancellables = Set<AnyCancellable>()
     private let filterCollectionList = Status.allCases.map(\.rawValue.capitalized)
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    init(viewModel: CharacterListVM) {
+        self.viewModel = viewModel
+        super.init(nibName: nil, bundle: nil)
+    }
     
     private let filtersCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
@@ -221,7 +230,7 @@ extension CharacterListVC: UITableViewDataSource, UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print("✅✅✅✅ Selected row \(indexPath.row + 1)")
+        viewModel.showCharacter(at: indexPath.row)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
